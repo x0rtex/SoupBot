@@ -112,6 +112,18 @@ async def cmd_quote(ctx: lightbulb.Context) -> None:
     await ctx.respond(attachment=quote.url)
 
 
+@bot.command()
+@lightbulb.add_cooldown(5.0, 1, lightbulb.GuildBucket)
+@lightbulb.command("flow", "Become a master in the art of mindfulness with a high quality lesson")
+@lightbulb.implements(lightbulb.SlashCommand)
+async def cmd_flow(ctx: lightbulb.Context) -> None:
+    embed_msg = hikari.Embed(title="⠀")
+    flow = inspirobot.flow()
+    for quote in flow:
+        embed_msg.add_field(name=quote.text, value="⠀")
+    await ctx.respond(embed_msg)
+
+
 def run() -> None:
     if os.name != "nt":
         import uvloop
