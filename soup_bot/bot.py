@@ -203,9 +203,6 @@ async def cmd_flow(ctx: lightbulb.Context) -> None:
 @lightbulb.command("album", "Upload multiple images/gifs are they will be stored in a compact album.")
 @lightbulb.implements(lightbulb.SlashCommand)
 async def cmd_album(ctx: lightbulb.Context) -> None:
-    print(f"\nctx.resolved.attachments: {ctx.resolved.attachments}")
-    print(f"\nctx.resolved.attachments.values(): {ctx.resolved.attachments.values()}")
-    print(f"\n[i for i in ctx.resolved.attachments.values()]: {[i for i in ctx.resolved.attachments.values()]}")
     attachments = [i for i in ctx.resolved.attachments.values()]
 
     attachment_dict = {}
@@ -238,7 +235,7 @@ async def cmd_album(ctx: lightbulb.Context) -> None:
             embed.set_image(url)
 
         pages = [embed for embed in reversed(embed_dict.values())]
-        miru_navigator = nav.NavigatorView(pages=pages)
+        miru_navigator = nav.NavigatorView(pages=pages, timeout=0, )
         await miru_navigator.send(channel_or_interaction=ctx.interaction)
 
     else:
