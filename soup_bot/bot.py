@@ -1,9 +1,9 @@
 import hikari
 import lightbulb
 import miru
+from miru.ext import nav
 import inspirobot
 from typing import Optional
-import logging
 import os
 import asyncio
 import time
@@ -11,6 +11,27 @@ import datetime
 import platform
 import psutil
 import random
+
+
+class MyNavButton(nav.NavButton):
+    # This is how you can create your own navigator button
+    # The extension also comes with the following nav buttons built-in:
+    #
+    # FirstButton - Goes to the first page
+    # PrevButton - Goes to previous page
+    # IndicatorButton - Indicates current page number
+    # StopButton - Stops the navigator session and disables all buttons
+    # NextButton - Goes to next page
+    # LastButton - Goes to the last page
+
+    async def callback(self, ctx: miru.Context) -> None:
+        await ctx.respond("You clicked me!", flags=hikari.MessageFlag.EPHEMERAL)
+
+    async def before_page_change(self) -> None:
+        # This function is called before the new page is sent by
+        # NavigatorView.send_page()
+        self.label = f"Page: {self.view.current_page+1}"
+
 
 bot = lightbulb.BotApp(
     os.environ["TOKEN"],
@@ -28,6 +49,33 @@ bot = lightbulb.BotApp(
 )
 
 miru.load(bot)
+
+
+@bot.listen()
+async def navigator(event: hikari.GuildMessageCreateEvent) -> None:
+
+    # Do not process messages from bots or empty messages
+    if event.is_bot or not event.content:
+        return
+
+    if event.content.startswith("mirunav"):
+        embed = hikari.Embed(title="I'm the second page!", description="Also an embed!")
+        pages = ["I'm the first page!", embed, "I'm the last page!"]
+        # Define our navigator and pass in our list of pages
+        miru_navigator = nav.NavigatorView(pages=pages)
+        # You may also pass an interaction object to this function
+        await miru_navigator.send(event.channel_id)
+
+    elif event.content.startswith("mirucustom"):
+        embed = hikari.Embed(title="I'm the second page!", description="Also an embed!")
+        pages = ["I'm a customized navigator!", embed, "I'm the last page!"]
+        # Define our custom buttons for this navigator
+        # All navigator buttons MUST subclass NavButton
+        buttons = [nav.PrevButton(), nav.StopButton(), nav.NextButton(), MyNavButton(label="Page: 1", row=1)]
+        # Pass our list of NavButton to the navigator
+        miru_navigator = nav.NavigatorView(pages=pages, buttons=buttons)
+
+        await miru_navigator.send(event.channel_id)
 
 
 @bot.command()
@@ -124,6 +172,123 @@ async def cmd_flow(ctx: lightbulb.Context) -> None:
     await ctx.respond(embed_msg)
 
 
+@bot.command()
+@lightbulb.add_cooldown(5.0, 1, lightbulb.GuildBucket)
+@lightbulb.option(
+    name="title",
+    description="title",
+    modifier=lightbulb.OptionModifier.CONSUME_REST
+)
+@lightbulb.option(
+    name="1",
+    description="image/gif",
+    type=hikari.Attachment,
+    modifier=lightbulb.OptionModifier.CONSUME_REST
+)
+@lightbulb.option(
+    name="2",
+    description="image/gif",
+    type=hikari.Attachment,
+    modifier=lightbulb.OptionModifier.CONSUME_REST,
+)
+@lightbulb.option(
+    name="3",
+    description="image/gif",
+    type=hikari.Attachment,
+    modifier=lightbulb.OptionModifier.CONSUME_REST,
+    required=False
+)
+@lightbulb.option(
+    name="4",
+    description="image/gif",
+    type=hikari.Attachment,
+    modifier=lightbulb.OptionModifier.CONSUME_REST,
+    required=False
+)
+@lightbulb.option(
+    name="5",
+    description="image/gif",
+    type=hikari.Attachment,
+    modifier=lightbulb.OptionModifier.CONSUME_REST,
+    required=False
+)
+@lightbulb.option(
+    name="6",
+    description="image/gif",
+    type=hikari.Attachment,
+    modifier=lightbulb.OptionModifier.CONSUME_REST,
+    required=False
+)
+@lightbulb.option(
+    name="7",
+    description="image/gif",
+    type=hikari.Attachment,
+    modifier=lightbulb.OptionModifier.CONSUME_REST,
+    required=False
+)
+@lightbulb.option(
+    name="8",
+    description="image/gif",
+    type=hikari.Attachment,
+    modifier=lightbulb.OptionModifier.CONSUME_REST,
+    required=False
+)
+@lightbulb.option(
+    name="9",
+    description="image/gif",
+    type=hikari.Attachment,
+    modifier=lightbulb.OptionModifier.CONSUME_REST,
+    required=False
+)
+@lightbulb.option(
+    name="10",
+    description="image/gif",
+    type=hikari.Attachment,
+    modifier=lightbulb.OptionModifier.CONSUME_REST,
+    required=False
+)
+@lightbulb.command("album", "Upload multiple images/gifs are they will be stored in a compact album.")
+@lightbulb.implements(lightbulb.SlashCommand)
+async def cmd_album(ctx: lightbulb.Context) -> None:
+    attachments = [i for i in ctx.resolved.attachments.values()]
+
+    attachment_dict = {}
+    attachment_index = 0
+    for attachment in attachments:
+        attachment_index += 1
+        if attachment.media_type in (
+                "image/gif",
+                "image/png",
+                "image/apng",
+                "image/jpg",
+                "image/jpeg",
+                "image/tiff",
+                "image/tif",
+                "image/bmp",
+                "image/webp"
+        ):
+            attachment_dict["Image {0}".format(attachment_index)] = attachment
+
+    if len(attachment_dict) > 1:
+        attachment_urls = [attachment.url for attachment in attachment_dict.values()]
+
+        embed_dict = {}
+        embed_index = 0
+        for _ in attachment_dict:
+            embed_index += 1
+            embed_dict["Embed {0}".format(embed_index)] = hikari.Embed(title=ctx.options.title)
+
+        for (embed, url) in zip(embed_dict.values(), attachment_urls):
+            embed.set_image(url)
+
+        pages = [embed for embed in reversed(embed_dict.values())]
+        miru_navigator = nav.NavigatorView(pages=pages)
+        await miru_navigator.send(channel_or_interaction=ctx.interaction)
+
+    else:
+        await ctx.respond("You must upload at least **two** images. Only images and gifs are supported.")
+
+
 def run() -> None:
     if os.name != "nt":
         import uvloop
@@ -135,7 +300,7 @@ def run() -> None:
         propagate_interrupts=True,  # Any OS interrupts get rethrown as errors.
         status=hikari.Status.ONLINE,
         activity=hikari.Activity(
-            name="x0rtex atm",
+            name="everyone",
             type=hikari.ActivityType.LISTENING
         )
     )
